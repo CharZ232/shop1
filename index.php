@@ -1,74 +1,7 @@
 <?php
-
 include 'config.php';
 session_start();
-
-class Cart
-{
-    private $conn;
-    private $userId;
-
-    public function __construct($dbConnection, $userId)
-    {
-        $this->conn = $dbConnection;
-        $this->userId = $userId;
-        $this->checkUserSession();
-    }
-
-    private function checkUserSession()
-    {
-        if (!isset($this->userId)) {
-            header('location:login.php');
-            exit();
-        }
-    }
-
-    public function addToCart($productName, $productPrice, $productImage, $productQuantity)
-    {
-        $query = "SELECT * FROM `cart` WHERE name = ? AND user_id = ?";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("si", $productName, $this->userId);
-        $stmt->execute();
-        $result = $stmt->get_result();
-
-        if ($result->num_rows > 0) {
-            return 'Product already added to cart!';
-        } else {
-            $query = "INSERT INTO `cart` (user_id, name, price, image, quantity) VALUES (?, ?, ?, ?, ?)";
-            $stmt = $this->conn->prepare($query);
-            $stmt->bind_param("isssi", $this->userId, $productName, $productPrice, $productImage, $productQuantity);
-            $stmt->execute();
-            return 'Product added to cart!';
-        }
-    }
-
-    public function updateCart($cartId, $cartQuantity)
-    {
-        $query = "UPDATE `cart` SET quantity = ? WHERE id = ?";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("ii", $cartQuantity, $cartId);
-        $stmt->execute();
-        return 'Cart quantity updated successfully!';
-    }
-
-    public function removeFromCart($cartId)
-    {
-        $query = "DELETE FROM `cart` WHERE id = ?";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("i", $cartId);
-        $stmt->execute();
-        header('location:index.php');
-    }
-
-    public function deleteAll()
-    {
-        $query = "DELETE FROM `cart` WHERE user_id = ?";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("i", $this->userId);
-        $stmt->execute();
-        header('location:index.php');
-    }
-}
+include 'Cart.php'; // Include the Cart class
 
 class UserSession
 {
@@ -84,38 +17,50 @@ class UserSession
 // Получение идентификатора пользователя
 $user_id = $_SESSION['user_id'] ?? null;
 
+// Initialize message array
+$message = [];
+
 // Создание объекта корзины
-$cart = new Cart($conn, $user_id);
+// Ensure $conn is available from config.php and $user_id is set for logged-in actions
+if (isset($conn) && $user_id) {
+    $cart = new Cart($conn, $user_id);
+} else if ($user_id) { // User is logged in, but $conn might be missing
+    die("Database connection not found in index.php. Check config.php.");
+}
+// If $user_id is not set, $cart object is not created here.
+// addToCart attempts below will only proceed if $cart is set.
 
 // Обработка действий
 if (isset($_GET['logout'])) {
-    UserSession::logout();
+    if ($user_id) { // Only attempt logout if user_id was set
+        UserSession::logout();
+    } else {
+        // If no user_id, perhaps redirect to login or just end script
+        header('location:login.php');
+        exit();
+    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['add_to_cart'])) {
-        $message = $cart->addToCart(
-            $_POST['product_name'],
-            $_POST['product_price'],
-            $_POST['product_image'],
-            $_POST['product_quantity']
-        );
+        if (!$user_id) {
+            // User must be logged in to add items to cart
+            $message[] = "Пожалуйста, войдите в систему, чтобы добавить товары в корзину.";
+            // Optionally redirect to login page:
+            // header('location:login.php');
+            // exit();
+        } elseif (isset($cart)) { // Check if $cart object was successfully created
+            $message[] = $cart->addToCart(
+                $_POST['product_name'],
+                $_POST['product_price'],
+                $_POST['product_image'],
+                $_POST['product_quantity']
+            );
+        } else {
+            // This case should ideally not be reached if $user_id is set and $conn is available.
+            $message[] = "Ошибка: Корзина недоступна. Попробуйте еще раз.";
+        }
     }
-
-    if (isset($_POST['update_cart'])) {
-        $message = $cart->updateCart(
-            $_POST['cart_id'],
-            $_POST['cart_quantity']
-        );
-    }
-}
-
-if (isset($_GET['remove'])) {
-    $cart->removeFromCart($_GET['remove']);
-}
-
-if (isset($_GET['delete_all'])) {
-    $cart->deleteAll();
 }
 
 ?>
@@ -134,40 +79,56 @@ if (isset($_GET['delete_all'])) {
 </head>
 <body>
    
-<?php
-if(isset($message)){
-   foreach($message as $message){
-      echo '<div class="message" onclick="this.remove();">'.$message.'</div>';
-   }
-}
-?>
-
 <header>
-<h1>Dolcetta</h1>
-  <nav>
-    <a href="http://shop1/#">Каталог</a>
-    
-    <a href="#">О нас</a>
-    <a href="#">Контакты</a>
+    <h1>Dolcetta</h1>
+    <nav>
+        <a href="index.php">Каталог</a>
+        <a href="cart.php">Корзина</a>
+        <a href="#">О нас</a>
+        <a href="#">Контакты</a>
+    </nav>
 </header>
 
 <div class="container">
 
+<?php
+if(!empty($message)){
+   foreach($message as $msg){
+      echo '<div class="message" onclick="this.remove();">'.htmlspecialchars($msg).'</div>';
+   }
+}
+?>
+
 <div class="user-profile">
 
    <?php
-      $select_user = mysqli_query($conn, "SELECT * FROM `user_form` WHERE id = '$user_id'") or die('query failed');
-      if(mysqli_num_rows($select_user) > 0){
-         $fetch_user = mysqli_fetch_assoc($select_user);
-      };
+      if (isset($conn) && $user_id) {
+         $select_user_query = "SELECT * FROM `user_form` WHERE id = ?";
+         $stmt_user = mysqli_prepare($conn, $select_user_query);
+         mysqli_stmt_bind_param($stmt_user, "i", $user_id);
+         mysqli_stmt_execute($stmt_user);
+         $result_user = mysqli_stmt_get_result($stmt_user);
+         if(mysqli_num_rows($result_user) > 0){
+            $fetch_user = mysqli_fetch_assoc($result_user);
+         } else {
+            // This case implies user_id from session does not exist in db, which is unusual
+            $fetch_user = ['name' => 'Пользователь не найден', 'email' => 'N/A']; 
+         }
+      } else {
+         // User is not logged in or $conn is not set
+         $fetch_user = ['name' => 'Гость', 'email' => 'Войдите или зарегистрируйтесь'];
+      }
    ?>
 
-   <p> username : <span><?php echo $fetch_user['name']; ?></span> </p>
-   <p> email : <span><?php echo $fetch_user['email']; ?></span> </p>
+   <p> Имя пользователя : <span><?php echo htmlspecialchars($fetch_user['name']); ?></span> </p>
+   <p> Email : <span><?php echo htmlspecialchars($fetch_user['email']); ?></span> </p>
    <div class="flex">
-      <a href="login.php" class="btn">Логин</a>
-      <a href="register.php" class="option-btn">Регистрация</a>
-      <a href="index.php?logout=<?php echo $user_id; ?>" onclick="return confirm('are your sure you want to logout?');" class="delete-btn">Выйти</a>
+      <?php if ($user_id): ?>
+         <a href="index.php?logout=<?php echo $user_id; ?>" onclick="return confirm('Вы уверены, что хотите выйти?');" class="delete-btn">Выйти</a>
+      <?php else: ?>
+         <a href="login.php" class="btn">Логин</a>
+         <a href="register.php" class="option-btn">Регистрация</a>
+      <?php endif; ?>
    </div>
 
 </div>
@@ -179,85 +140,39 @@ if(isset($message)){
    <div class="box-container">
 
    <?php
-      $select_product = mysqli_query($conn, "SELECT * FROM `products`") or die('query failed');
-      if(mysqli_num_rows($select_product) > 0){
-         while($fetch_product = mysqli_fetch_assoc($select_product)){
+      if (isset($conn)) {
+         $select_product_query = "SELECT * FROM `products`";
+         // Using mysqli_query for simplicity as no user input in this specific query
+         $result_product = mysqli_query($conn, $select_product_query);
+         
+         if($result_product && mysqli_num_rows($result_product) > 0){
+            while($fetch_product = mysqli_fetch_assoc($result_product)){
    ?>
-      <form method="post" class="box" action="">
-         <img src="images/<?php echo $fetch_product['image']; ?>" alt="">
-         <div class="name"><?php echo $fetch_product['name']; ?></div>
-         <div class="price">$<?php echo $fetch_product['price']; ?>/-</div>
-         <input type="number" min="1" name="product_quantity" value="1">
-         <input type="hidden" name="product_image" value="<?php echo $fetch_product['image']; ?>">
-         <input type="hidden" name="product_name" value="<?php echo $fetch_product['name']; ?>">
-         <input type="hidden" name="product_price" value="<?php echo $fetch_product['price']; ?>">
+      <form method="post" class="box" action="index.php"> <!-- Action to index.php -->
+         <img src="images/<?php echo htmlspecialchars($fetch_product['image']); ?>" alt="<?php echo htmlspecialchars($fetch_product['name']); ?>">
+         <div class="name"><?php echo htmlspecialchars($fetch_product['name']); ?></div>
+         <div class="price">$<?php echo htmlspecialchars(number_format($fetch_product['price'], 2)); ?>/-</div>
+         <input type="number" min="1" name="product_quantity" value="1" class="qty">
+         <input type="hidden" name="product_image" value="<?php echo htmlspecialchars($fetch_product['image']); ?>">
+         <input type="hidden" name="product_name" value="<?php echo htmlspecialchars($fetch_product['name']); ?>">
+         <input type="hidden" name="product_price" value="<?php echo htmlspecialchars($fetch_product['price']); ?>">
          <input type="submit" value="add to cart" name="add_to_cart" class="btn">
       </form>
    <?php
-      };
-   };
+            } // end while
+         } else {
+            echo '<p class="empty">Товары еще не добавлены!</p>';
+         }
+      } else {
+         echo '<p class="empty">Ошибка подключения к базе данных.</p>';
+      }
    ?>
 
    </div>
 
 </div>
 
-<div class="shopping-cart">
-
-   <h1 class="heading">Корзина</h1>
-
-   <table>
-      <thead>
-         <th>фото</th>
-         <th>название</th>
-         <th>цена</th>
-         <th>количество</th>
-         <th>общая сумма</th>
-         <th>действие</th>
-      </thead>
-      <tbody>
-      <?php
-         $cart_query = mysqli_query($conn, "SELECT * FROM `cart` WHERE user_id = '$user_id'") or die('query failed');
-         $grand_total = 0;
-         if(mysqli_num_rows($cart_query) > 0){
-            while($fetch_cart = mysqli_fetch_assoc($cart_query)){
-      ?>
-         <tr>
-            <td><img src="images/<?php echo $fetch_cart['image']; ?>" height="100" alt=""></td>
-            <td><?php echo $fetch_cart['name']; ?></td>
-            <td>$<?php echo $fetch_cart['price']; ?>/-</td>
-            <td>
-               <form action="" method="post">
-                  <input type="hidden" name="cart_id" value="<?php echo $fetch_cart['id']; ?>">
-                  <input type="number" min="1" name="cart_quantity" value="<?php echo $fetch_cart['quantity']; ?>">
-                  <input type="submit" name="update_cart" value="update" class="option-btn">
-               </form>
-            </td>
-            <td>$<?php echo $sub_total = ($fetch_cart['price'] * $fetch_cart['quantity']); ?>/-</td>
-            <td><a href="index.php?remove=<?php echo $fetch_cart['id']; ?>" class="delete-btn" onclick="return confirm('remove item from cart?');">убрать</a></td>
-         </tr>
-      <?php
-         $grand_total += $sub_total;
-            }
-         }else{
-            echo '<tr><td style="padding:20px; text-transform:capitalize;" colspan="6">no item added</td></tr>';
-         }
-      ?>
-      <tr class="table-bottom">
-         <td colspan="4">Общая сумма :</td>
-         <td>$<?php echo $grand_total; ?>/-</td>
-         <td><a href="index.php?delete_all" onclick="return confirm('delete all from cart?');" class="delete-btn <?php echo ($grand_total > 1)?'':'disabled'; ?>">Убрать все</a></td>
-      </tr>
-   </tbody>
-   </table>
-
-   <div class="cart-btn">  
-      <a href="#" class="btn <?php echo ($grand_total > 1)?'':'disabled'; ?>">Перейти к оформлению</a>
-   </div>
-
-</div>
-
-</div>
+</div> <!-- .container -->
 <style>
   @font-face {
   font-family: Moderne Sans;
