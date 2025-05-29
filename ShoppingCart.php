@@ -1,6 +1,6 @@
 <?php
 
-class Cart
+class ShoppingCart
 {
     private $conn;
     private $userId;

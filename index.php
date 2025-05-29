@@ -1,7 +1,7 @@
 <?php
 include 'config.php';
 session_start();
-include 'Cart.php'; // Include the Cart class
+include 'ShoppingCart.php'; // Include the ShoppingCart class
 
 class UserSession
 {
@@ -23,7 +23,7 @@ $message = [];
 // Создание объекта корзины
 // Ensure $conn is available from config.php and $user_id is set for logged-in actions
 if (isset($conn) && $user_id) {
-    $cart = new Cart($conn, $user_id);
+    $cart = new ShoppingCart($conn, $user_id);
 } else if ($user_id) { // User is logged in, but $conn might be missing
     die("Database connection not found in index.php. Check config.php.");
 }

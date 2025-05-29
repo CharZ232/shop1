@@ -1,7 +1,11 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 include 'config.php';
 session_start();
-include 'Cart.php'; // Include the Cart class
+include 'ShoppingCart.php'; // Include the ShoppingCart class
 
 // Получение идентификатора пользователя
 $user_id = $_SESSION['user_id'] ?? null;
@@ -18,7 +22,7 @@ if (!isset($conn)) {
     // and $conn is initialized there.
     die("Database connection not found in cart.php. Check config.php."); 
 }
-$cart = new Cart($conn, $user_id);
+$cart = new ShoppingCart($conn, $user_id);
 
 // Обработка действий
 $message = []; // Initialize message array
@@ -35,9 +39,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 if (isset($_GET['remove'])) {
     if ($cart->removeFromCart($_GET['remove'])) {
-        $message[] = "Item removed successfully.";
+        $message[] = "Item removed successfully."; // This message will be lost due to redirect
     } else {
-        $message[] = "Error removing item.";
+        $message[] = "Error removing item."; // This message will be lost due to redirect
     }
     // Redirect to cart.php without GET parameters to prevent re-execution on refresh
     header('location:cart.php');
@@ -46,9 +50,9 @@ if (isset($_GET['remove'])) {
 
 if (isset($_GET['delete_all'])) {
     if ($cart->deleteAll()) {
-        $message[] = "All items removed successfully.";
+        $message[] = "All items removed successfully."; // This message will be lost due to redirect
     } else {
-        $message[] = "Error removing all items.";
+        $message[] = "Error removing all items."; // This message will be lost due to redirect
     }
     // Redirect to cart.php without GET parameters
     header('location:cart.php');
