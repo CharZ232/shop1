@@ -33,7 +33,7 @@
 }
 
 body{
-   background-color: var(--light-bg);
+   background-color: var(--light-bg); /* Default body background */
 }
 
 .message{
@@ -136,12 +136,13 @@ body{
    padding-bottom: 70px;
 }
 
-.container .heading{
+.container .heading{ /* This is for headings within .container, like product/cart page titles */
    text-align: center;
    margin-bottom: 20px;
    font-size: 40px;
    text-transform: uppercase;
    color:var(--black);
+   font-family: 'Poppins', sans-serif; /* Ensure this also uses Poppins if it was different */
 }
 
 .container .user-profile{
@@ -299,20 +300,22 @@ body{
    }
 } 
 
-/* Added styles from index.php */
+/* Styles moved and cleaned from index.php's inline style block */
 
-  @font-face {
-  font-family: Moderne Sans;
+/* @font-face { font-family: Moderne Sans; } */ /* Moderne Sans commented out */
 
+/* General body styling from the moved block - will be overridden by the first body rule if conflicting, kept for specific properties like display:grid if needed */
+body { /* This was the second body declaration, some properties might be overridden by the first body rule */
+  font-family: acumin-pro, system-ui, sans-serif; /* This will be overridden by 'Poppins' from the first '*' and 'body' */
+  margin: 0; /* Already in first '*' */
+  display: grid; /* This is a new property */
+  grid-template-rows: auto 1fr auto; /* New property */
+  font-size: 14px; /* New property, might conflict with other element styles */
+  background-color: #f4f4f4; /* Overrides --light-bg for body if this is rendered later by browser. Keeping for now. */
+  align-items: start; /* New property */
+  min-height: 100vh; /* New property */
 }
-* {
-  box-sizing: border-box;
-}
-body {
-  margin: 0;
-  background: #000;
-  background-size: cover;
-}
+
 video { 
     position: absolute;
     top: 0;
@@ -328,30 +331,40 @@ div#fashion {
   align-items: center;
   justify-content: center;
 }
+
+/* General header styling, distinct from .container header elements */
 header {
-  margin-top:20px
+  margin-top:20px; /* Consider changing to margin-top: 20px; */
   position: fixed;
   width: 100%;
   text-align: center;
-  color: black;
+  color: black; /* Default color for header text */
   transition: .4s;
+  z-index: 1001; /* Ensure header is above messages if sticky */
 }
 header:hover {
   background: rgba(255,255,255,0.8);
-  color: #000;
+  color: #000; /* Text color on hover */
 }
+
+/* General h1 styling, e.g. for site title in header. Different from .container .heading */
 h1 {
-  font-family: Moderne Sans, sans-serif;
+  font-family: 'Poppins', sans-serif; /* Changed from Moderne Sans */
   text-align: center;
-  font-size: 2rem;
+  font-size: 2rem; /* Approx 32px */
   width: 100%;
   letter-spacing: .5rem;
+  /* Note: .container .heading also styles h1 elements within .container */
 }
+
+/* General nav a styling, e.g. for main navigation in header */
 nav a {
   text-decoration: none;
-  color: inherit;
+  color: inherit; /* Inherits color from parent (header) */
   padding: 1rem;
 }
+
+/* General h2 styling, if used */
 h2 { 
   font-family: Century Schoolbook, Century Schoolbook L, Georgia, serif;
   font-size: 8vmin;
@@ -361,34 +374,27 @@ h2 {
   color: #000000;
   font-weight: 100;
 }
-   *, *:before, *:after {
-  box-sizing: border-box;
-}
 
-html {
-  font-size: 100%;
-}
-
-/* body rules are duplicated, the later one will take precedence */
-body {
-  font-family: acumin-pro, system-ui, sans-serif;
-  margin: 0;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  font-size: 14px;
-  background-color: #f4f4f4; /* This will override the previous body background */
-  align-items: start;
-  min-height: 100vh;
-}
-
+/* Footer styles from the moved block */
+/* The first .footer rule (margin-top, display, padding etc.) will apply */
+/* This second .footer rule's properties will override if they conflict */
 .footer {
-  margin-top:-100px
-  display: flex;
-  flex-flow: row wrap;
-  padding: 30px 30px 20px 30px;
-  color: #2f2f2f;
-  background-color: #fff;
-  border-top: 1px solid #e5e5e5;
+  margin-top:-100px; /* This one seems specific to this footer design */
+  display: flex; /* Already flex, but re-declared */
+  flex-flow: row wrap; /* Already flex-flow, but re-declared */
+  padding: 30px 30px 20px 30px; /* Overwrites previous padding */
+  color: #2f2f2f; /* Overwrites previous color */
+  background-color: #fff; /* Overwrites previous background-color */
+  border-top: 1px solid #e5e5e5; /* Overwrites previous border */
+  /* Additional footer styles from the second block */
+  position: relative; /* New property for this .footer */
+  width: 100%; /* Already width 100% from .footer > * but more specific here */
+  background: #3586ff; /* THIS WILL OVERRIDE background-color: #fff; */
+  min-height: 100px; /* New property */
+  padding: 20px 50px; /* THIS WILL OVERRIDE the padding above */
+  justify-content: center; /* New property */
+  align-items: center; /* New property */
+  flex-direction: column; /* New property */
 }
 
 .footer > * {
@@ -508,32 +514,8 @@ body {
     flex: 2 0px;
   }
 }
-/* This @import was part of the moved styles. Generally, @import is preferred at the top. */
-@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700;800;900&display=swap");
 
-/* '*' selector is duplicated. Rules will be merged by the browser, later ones might override. */
-* {
-  margin-top:-10px: /* This seems like an error */
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: "Poppins", sans-serif;
-}
-
-
-/* .footer class is duplicated. Rules will be merged. */
-.footer {
-  position: relative;
-  width: 100%;
-  background: #3586ff; /* This will override previous .footer background-color */
-  min-height: 100px;
-  padding: 20px 50px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-}
-
+/* Specific styles for the animated footer part */
 .social-icon,
 .menu {
   position: relative;
@@ -551,7 +533,7 @@ body {
 
 .social-icon__link {
   font-size: 2rem;
-  color: #fff;
+  color: #fff; /* Text color for social icons */
   margin: 0 10px;
   display: inline-block;
   transition: 0.5s;
@@ -562,7 +544,7 @@ body {
 
 .menu__link {
   font-size: 1.2rem;
-  color: #fff;
+  color: #fff; /* Text color for menu links in footer */
   margin: 0 10px;
   display: inline-block;
   transition: 0.5s;
@@ -575,8 +557,8 @@ body {
   opacity: 1;
 }
 
-.footer p {
-  color: #fff;
+.footer p { /* Paragraphs specifically in the .footer */
+  color: #fff; /* Text color for paragraphs in footer */
   margin: 15px 0 10px 0;
   font-size: 1rem;
   font-weight: 300;
@@ -603,7 +585,7 @@ body {
   z-index: 999;
   opacity: 0.5;
   bottom: 10px;
-  animation: animate 4s linear infinite !important;
+  animation: animate 4s linear infinite !important; /* important might be problematic */
 }
 
 .wave#wave3 {
@@ -625,7 +607,7 @@ body {
     background-position-x: 1000px;
   }
   100% {
-    background-positon-x: 0px; /* Typo */
+    background-position-x: 0px; /* Corrected typo */
   }
 }
 
@@ -634,6 +616,6 @@ body {
     background-position-x: -1000px;
   }
   100% {
-    background-positon-x: 0px; /* Typo */
+    background-position-x: 0px; /* Corrected typo */
   }
 }
