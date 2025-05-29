@@ -306,7 +306,6 @@ body{
 
 /* General body styling from the moved block - will be overridden by the first body rule if conflicting, kept for specific properties like display:grid if needed */
 body { /* This was the second body declaration, some properties might be overridden by the first body rule */
-  font-family: acumin-pro, system-ui, sans-serif; /* This will be overridden by 'Poppins' from the first '*' and 'body' */
   margin: 0; /* Already in first '*' */
   display: grid; /* This is a new property */
   grid-template-rows: auto 1fr auto; /* New property */
